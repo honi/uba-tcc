@@ -1,6 +1,29 @@
 \documentclass{beamer}
+\usepackage[utf8]{inputenc}
+\usepackage[pdf,tmpdir]{graphviz}
+\usepackage{graphicx}
+\usepackage[dvipsnames]{xcolor}
+\usepackage{mathrsfs}
+\usepackage{bbold}
+\usepackage[export]{adjustbox}
+\usepackage{stmaryrd}
+
 \setbeamertemplate{navigation symbols}{}
-\title{Mailbox Types for Unordered Interactions\footnote{\tiny{Ugo de'Liguoro, Luca Padovani (2016). https://arxiv.org/abs/1801.04167}}}
+\usefonttheme[onlymath]{serif}
+\graphicspath{{./assets/}}
+
+\definecolor{msg-color}{RGB}{77,0,0}
+\definecolor{keyword}{RGB}{8,0,153}
+
+\newcommand{\msgtag}[1]{\texttt{\textcolor{msg-color}{#1}}}
+\newcommand{\msgstore}[2]{\msgtag{#1}[\overline{#2}]}
+\newcommand{\msgreceive}[2]{\msgtag{#1}(\overline{#2})}
+\newcommand{\done}{\texttt{\textcolor{keyword}{done}}}
+\newcommand{\free}[1]{\texttt{\textcolor{keyword}{free}}\hspace{0.25em}#1}
+\newcommand{\fail}[1]{\texttt{\textcolor{keyword}{fail}}\hspace{0.25em}#1}
+\newcommand{\parbar}{\kern3pt\rule[-3pt]{0.8pt}{0.9\baselineskip}\kern3pt}
+
+\title{Mailbox Types for Unordered Interactions\footnote{\tiny{Ugo de'Liguoro, Luca Padovani (2018). https://arxiv.org/abs/1801.04167}}}
 \author{Presentación por Jonathan Bekenstein}
 \institute{Materia optativa sobre Tipos Comportamentales y Contratos}
 \date{2024}
@@ -10,56 +33,322 @@
 \frame{\titlepage}
 
 \begin{frame}{Introducción}
+    Modelar interacciones \textbf{asincrónicas} sobre diferentes topologías de procesos concurrentes. La comunicación es \textbf{multi-party} y sucede mediante el uso de un \textbf{mailbox}, en donde:
     \begin{itemize}
-        \item Mailbox calculus
-        \item Mailbox type system
+        \item procesos pueden escribir mensajes identificados por un \emph{tag} con argumentos opcionales,
+        \item procesos pueden consumir (leer) los mensajes en un orden arbitrario (\emph{out-of-order} o \emph{selective processing}).
     \end{itemize}
+    \center
+    \vspace{-1em}
+    \digraph[scale=0.5]{intro}{
+        graph [rankdir=LR, pad=0.1]
+        node [shape=circle, fontname="Latin Modern Mono"]
+        mailbox [shape=box]
+        P1 -> mailbox
+        P2 -> mailbox
+        P3 -> mailbox
+        mailbox -> Q
+    }
 \end{frame}
 
-\begin{frame}{Mailbox calculus}{Sintaxis}
+\begin{frame}{Mailbox calculus}{Sintaxis: gramática}
+    \begin{figure}[H]
+        \centering
+        \includegraphics[width=0.8\textwidth]{syntax}
+    \end{figure}
+
+    \footnotesize{$\overline{u}$ denota la secuencia $u_1, \dots, u_n$}
+\end{frame}
+
+\begin{frame}{Mailbox calculus}{Sintaxis: mensajes}
+    \begin{block}{Enviar mensajes}
+        $u!\msgstore{m}{v}$
+        \\ Guarda un mensaje en el mailbox $u$ identificado con el tag $\msgtag{m}$ y argumentos $\overline{v}$.
+    \end{block}
+
+    \begin{block}{Recibir mensajes}
+        $u?\msgreceive{m}{x}.P$ \\ Consume selectivamente el mensaje con tag $\msgtag{m}$ del mailbox $u$ y continúa con $P$ reemplazando $\overline{x}$ por los argumentos del mensaje.
+    \end{block}
+\end{frame}
+
+\begin{frame}{Mailbox calculus}{Sintaxis: procesos}
+    \begin{block}{Invocación}
+        $X[\overline{u}]$ representa la invocación de un proceso llamado $X$ con parámetros $\overline{u}$. Asumimos que existe una definición global de procesos de la forma $X(\overline{x}) \triangleq P$.
+    \end{block}
+
+    \begin{block}{Paralelo y restricción}
+        $P \parbar Q$ denota la composición paralela de procesos, y $(\nu a) P$ representa un mailbox $a$ restringido al scope de $P$.
+    \end{block}
+
+    \begin{block}{Terminación}
+        Un proceso $\done$ representa un proceso terminado y que no realiza ninguna otra acción.
+    \end{block}
+\end{frame}
+
+\begin{frame}{Mailbox calculus}{Sintaxis: guardas}
+    \begin{block}{Guardas}
+        Las guardas $G$ y la composición de guardas $G+H$ nos permite modelar distintas ``ramas'' de ejecución en función del mensaje consumido del mailbox. Luego se usa exclusivamente la continuación de la guarda que consumió el mensaje.
+    \end{block}
+
+    \begin{block}{Errores}
+        $\fail{u}$ permite modelar un runtime error al recibir un mensaje inesperado.
+    \end{block}
+
+    \begin{block}{Eliminar mailbox}
+        $\free{u}.P$ permite eliminar el mailbox $u$ si ya no se va a utilizar y continuar la ejecución con $P$.
+    \end{block}
 \end{frame}
 
 \begin{frame}{Mailbox calculus}{Semántica operacional}
+    \begin{block}{Reglas de reducción}
+        \begin{figure}[H]
+            \centering
+            \includegraphics[width=0.9\textwidth]{reduction-rules}
+        \end{figure}
+    \end{block}
+
+    \begin{block}{Relación de congruencia estructural}
+        \begin{figure}[H]
+            \centering
+            \includegraphics[width=0.9\textwidth]{structural-congruence}
+        \end{figure}
+    \end{block}
 \end{frame}
 
-\begin{frame}{Mailbox calculus}{Reglas de congruencia}
+\begin{frame}{Ejemplo 1: Lock}
+    \begin{figure}[H]
+        \centering
+        \includegraphics[width=\textwidth]{example1-lock}
+    \end{figure}
+    \vspace{-1em}
+    \begin{figure}[H]
+        \centering
+        \includegraphics[width=\textwidth]{example1-user}
+    \end{figure}
+    \vspace{-1em}
+    \begin{figure}[H]
+        \centering
+        \includegraphics[width=\textwidth]{example1-usage}
+    \end{figure}
+
+    \begin{block}{Observaciones}
+        \begin{itemize}
+            \item \texttt{FreeLock} consume de manera no determinística los mensajes \msgtag{acquire}.
+            \item \texttt{User} utiliza la referencia $l$ para enviar el mensaje \msgtag{release} ya que es ésta la referencia al mailbox que tiene la capabilidad de procesar este mensaje.
+        \end{itemize}
+    \end{block}
 \end{frame}
 
-\begin{frame}{Mailbox calculus}{Ejemplo}
+\begin{frame}{Mailbox calculus}{Caracterizaciones operacionales}
+    \begin{block}{Contextos de procesos}
+        \vspace{-0.5em}
+        \begin{figure}[H]
+            \includegraphics[width=0.7\textwidth,left]{process-context}
+        \end{figure}
+        \vspace{-1em}
+        Los contextos de procesos buscan identificar un ``unguarded hole'', es decir un agujero que no tiene prefijada una acción sobre un mailbox.
+    \end{block}
+    \begin{block}{Def 4: Mailbox conformant}
+        $P$ es \emph{mailbox conformant} si $P \not\rightarrow^\ast \mathscr{C}[\fail{a}]$ para todo $\mathscr{C}$ y $a$.
+        \\
+        En el ejemplo del lock, ser \emph{mailbox conformant} significa nunca liberar el lock antes de adquirirlo.
+    \end{block}
 \end{frame}
 
-\begin{frame}{Mailbox calculus}{Definiciones}
-    \begin{block}{Mailbox conformant}
-        Mailbox conformant
+\begin{frame}{Mailbox calculus}{Caracterizaciones operacionales}
+    \begin{block}{Def 5: Deadlock free}
+        $P$ es \emph{deadlock free} si $P \rightarrow^\ast Q \not\rightarrow$ implica $Q \equiv \done$.
+        \\
+        Un proceso se considera \emph{deadlock free} si al terminar tenemos que (1) no hay subprocesos esperando un mensaje que nunca se va a producir y (2) todos los mailbox están vacíos.
     \end{block}
-    \begin{block}{Deadlock free}
-        Deadlock free
+    \begin{block}{Def 7: Fairly terminating}
+        $P$ es \emph{fairly terminating} si $P \rightarrow^\ast Q$ implica que $Q \rightarrow^\ast \done$.
+        \\
+        Es una propiedad más fuerte que deadlock freedom. Si un proceso es \emph{fairly terminating} entonces se garantiza \emph{junk freedom} (no quedan mensajes sin consumir en ningún mailbox).
     \end{block}
-    \begin{block}{Fairly terminating}
-        Fairly terminating
-    \end{block}
+\end{frame}
+
+\begin{frame}{Ejemplo 2: Future variable}
+    \begin{figure}[H]
+        \includegraphics[width=\textwidth]{example2-future}
+    \end{figure}
+    \begin{figure}[H]
+        \includegraphics[width=\textwidth]{example2-deadlock}
+    \end{figure}
+
+    Es legal hacer un \msgtag{get} de una variable futura antes de que sea resuelta con \msgtag{resolve}. Este proceso es \emph{mailbox conformant} pero está en deadlock. Para evitar que este proceso esté bien tipado se usan \emph{dependency graphs}.
 \end{frame}
 
 \begin{frame}{Mailbox type system}{Sintaxis}
-    Capabilities
-    Patterns
+    \begin{figure}[H]
+        \includegraphics[width=0.9\textwidth]{type-syntax}
+    \end{figure}
 \end{frame}
 
-\begin{frame}{Mailbox type system}{Subpattern}
-\end{frame}
-
-\begin{frame}{Mailbox type system}{Clasificación de tipos}
+\begin{frame}{Mailbox type system}{Patrones}
+    Los patrones son \emph{expresiones regulares conmutativas} que describen las configuraciones válidas de los mensajes dentro de un mailbox.
+    \vspace{1em}
     \begin{itemize}
-        \item relevant
-        \item reliable
-        \item usable
+        \item $\mathbb{0}$: \emph{unreliable mailbox} que recibió un mensaje inesperado.
+        \item $\msgtag{A} + \msgtag{B}$: contiene un mensaje $\msgtag{A}$ o un mensaje $\msgtag{B}$ pero no ambos.
+        \item $\msgtag{A} + \mathbb{1}$: contiene un mensaje $\msgtag{A}$ o está vacío.
+        \item $\msgtag{A} \cdot \msgtag{B}$: contiene un mensaje $\msgtag{A}$ y un mensaje $\msgtag{B}$.
+        \item $\msgtag{A}^\ast$: contiene un cantidad arbitraria (incluso $0$) de mensajes $\msgtag{A}$.
     \end{itemize}
 \end{frame}
 
-\begin{frame}{Mailbox type system}{Ejemplo}
+\begin{frame}{Mailbox type system}{Capabilities}
+    Un \emph{mailbox type} consiste en un \emph{capability} ($?$ o $!$) junto a un patrón. Un proceso debe cumplir ciertas obligaciones y tiene ciertas garantías descriptas por el mailbox type asociado al mailbox que usa.
+    \vspace{1em}
+    \begin{itemize}
+        \item $!\msgtag{A}$: el proceso \textbf{debe} escribir un mensaje $\msgtag{A}$ en el mailbox.
+        \item $?\msgtag{A}$: el proceso tiene \textbf{garantizado} recibir un mensaje $\msgtag{A}$.
+    \end{itemize}
 \end{frame}
 
-\begin{frame}{Mailbox type system}{Grafo de dependencias}
+\begin{frame}{Mailbox type system}{Capabilities: más ejemplos}
+    \vspace{1em}
+    \begin{itemize}
+        \item $!(\msgtag{A} + \mathbb{1})$: el proceso \textbf{puede} escribir un mensaje $\msgtag{A}$ en el mailbox, pero no está obligado a hacerlo.
+        \item $!(\msgtag{A} + \msgtag{B})$: el proceso \textbf{debe} escribir un mensaje $\msgtag{A}$ o $\msgtag{B}$, pero puede \textbf{elegir} cuál.
+        \item $?(\msgtag{A} + \msgtag{B})$: el proceso \textbf{debe} estar preparado para recibir tanto un mensaje $\msgtag{A}$ como $\msgtag{B}$.
+        \item $?(\msgtag{A} \cdot \msgtag{B})$: el proceso tiene \textbf{garantizado} recibir un mensaje $\msgtag{A}$ y otro $\msgtag{B}$, y puede elegir en qué orden recibirlos.
+        \item $!(\msgtag{A} \cdot \msgtag{B})$: el proceso \textbf{debe} escribir un mensaje $\msgtag{A}$ y otro $\msgtag{B}$.
+        \item $!\msgtag{A}^\ast$: el proceso \textbf{elige} cuántos mensajes $\msgtag{A}$ escribir.
+        \item $?\msgtag{A}^\ast$: el proceso \textbf{debe} estar preparado para recibir una cantidad arbitraria de mensajes $\msgtag{A}$.
+    \end{itemize}
+\end{frame}
+
+\begin{frame}{Mailbox type system}{Semántica de patrones}
+    La semántica de los patrones se define como conjuntos de multiconjuntos de átomos: $\msgstore{m}{\tau}$.
+
+    \begin{figure}[H]
+        \includegraphics[width=\textwidth]{subpattern}
+    \end{figure}
+
+    Dada una relación preorder $\mathscr{R}$ sobre los tipos básicos, escribimos $E \sqsubseteq_\mathscr{R} F$ para decir que E es un subpatrón de F si $\langle \msgtag{m}_i[\overline{\tau}_i] \rangle_{i \in I} \in \llbracket E \rrbracket$ implica $\langle \msgtag{m}_i[\overline{\sigma}_i] \rangle_{i \in I} \in \llbracket F \rrbracket$ y además $\overline{\tau}_i \hspace{0.25em} \mathscr{R} \hspace{0.25em} \overline{\sigma}_i$ para todo $i \in I$.
+    \vspace{1em}
+
+    Escribimos $\simeq_\mathscr{R}$ para denotar $\sqsubseteq_\mathscr{R} \cap \sqsupseteq_\mathscr{R}$.
+    \vspace{1em}
+
+    Notemos que $\sqsubseteq_\mathscr{R}$ es covariante respecto a $\mathscr{R}$,
+    \\ pues $\overline{\tau} \hspace{0.25em} \mathscr{R} \hspace{0.25em} \overline{\sigma}$ implica $\msgstore{m}{\tau} \sqsubseteq_\mathscr{R} \msgstore{m}{\sigma}$.
+\end{frame}
+
+\begin{frame}{Mailbox type system}{Subtipado}
+    Decimos que $\mathscr{R}$ es una \emph{relación de subtipado} si $\tau \hspace{0.25em} \mathscr{R} \hspace{0.25em} \sigma$ implica
+    \begin{enumerate}
+        \item $\tau = \hspace{0.3em} ?E$ y $\sigma = \hspace{0.3em} ?F$ y $E \sqsubseteq_\mathscr{R} F$, o bien
+        \item $\tau = \hspace{0.3em} !E$ y $\sigma = \hspace{0.3em} !F$ y $F \sqsubseteq_\mathscr{R} E$
+    \end{enumerate}
+    \vspace{1em}
+
+    Escribimos $\leqslant$ para denotar la mayor relación de subtipado y decimos que $\tau$ es un subtipo de $\sigma$ si $\tau \leqslant \sigma$.
+    \vspace{1em}
+
+    Escribimos $\lessgtr$ para $\leqslant \cap \geqslant$, $\sqsubseteq$ para $\sqsubseteq_{\leqslant}$ y $\simeq$ para $\simeq_{\leqslant}$.
+    \vspace{1em}
+
+    Las 2 reglas se corresponden directamente con las reglas covariantes y contravariantes usuales para canales con capacidades de entrada y salida.
+\end{frame}
+
+\begin{frame}{Mailbox type system}{Subtipado: ejemplos}
+    \begin{itemize}
+        \item $?\msgtag{A} \leqslant \hspace{0.3em} ?(\msgtag{A} + \msgtag{B})$: un mailbox de tipo $?\msgtag{A}$ ofrece garantías más fuertes que otro de tipo $?(\msgtag{A} + \msgtag{B})$. Si un proceso sabe usar un mailbox donde pueden haber mensajes $\msgtag{A}$ o $\msgtag{B}$, también sabe usar un mailbox donde solo hay mensajes $\msgtag{A}$.
+        \item $!(\msgtag{A} + \msgtag{B}) \leqslant \hspace{0.3em} !\msgtag{A}$: un mailbox de tipo $!(\msgtag{A} + \msgtag{B})$ es más permisivo que otro de tipo $!\msgtag{A}$. Si un proceso necesita un mailbox para escribir un mensaje $\msgtag{A}$, también le sirve un mailbox donde se puede escribir mensajes $\msgtag{A}$ o $\msgtag{B}$.
+    \end{itemize}
+\end{frame}
+
+
+\begin{frame}{Mailbox type system}{Relaciones de subtipado especiales}
+    Algunos mailbox types tienen patrones que están en cierta relación particular con las constantes $\mathbb{0}$ (unreliable mailbox) y $\mathbb{1}$ (empty mailbox). Estos tipos tienen la siguiente clasificación:
+    \vspace{1em}
+
+    \begin{itemize}
+        \item \textbf{relevant}: si $\tau \not\leqslant \hspace{0.3em} !\mathbb{1}$ (caso contrario \emph{irrelevant})
+        \\ Un mailbox \emph{relevant} debe usarse, mientras que uno \emph{irrelevant} puede descartarse. Todos los mailbox con input capability son \emph{relevantes}.
+        \item \textbf{reliable}: si $\tau \not\leqslant \hspace{0.3em} ?\mathbb{0}$ (caso contrario \emph{unreliable})
+        \\ Un mailbox \emph{reliable} no recibió mensajes inesperados. Todos los mailbox con output capability son \emph{reliable}.
+        \item \textbf{usable}: si $!\mathbb{0} \not\leqslant \hspace{0.2em} \tau$ (caso contrario \emph{unusable})
+        \\ Un mailbox \emph{usable} puede ser usado. Todos los mailbox con input capability son \emph{usable}.
+    \end{itemize}
+\end{frame}
+
+\begin{frame}{Mailbox type system}{Ejemplo 11: lock type}
+    \begin{figure}[H]
+        \centering
+        \includegraphics[width=\textwidth]{example1-lock}
+    \end{figure}
+
+    El mailbox usado por FreeLock tendrá diferentes tipos dependiendo del estado interno del lock y desde qué óptica lo miramos.
+    \vspace{1em}
+
+    \begin{itemize}
+        \item Desde FreeLock: $?\msgtag{acquire}[!\msgtag{reply}[!\msgtag{release}]]^\ast$
+        \item Desde BusyLock: $?(\msgtag{release} \cdot \msgtag{acquire}[!\msgtag{reply}[!\msgtag{release}]]^\ast)$
+        \item Desde User hacia FreeLock: $!\msgtag{acquire}[!\msgtag{reply}[!\msgtag{release}]]^\ast$
+        \item Desde Owner hacia BusyLock: $!\msgtag{release}$
+
+    \end{itemize}
+\end{frame}
+
+\begin{frame}{Mailbox type system}{Grafo de dependencias: sintaxis}
+    \begin{figure}[H]
+        \includegraphics[width=\textwidth]{dependency-graph-syntax}
+    \end{figure}
+
+    El grafo de dependencias es un multigrafo no dirigido donde los vértices del grafo son los nombres de los mailbox y el \textbf{objetivo es trackear las dependencias entre mailboxes}. Intuitivamente hay una dependencia entre $u$ y $v$ si:
+    \vspace{1em}
+
+    \begin{itemize}
+        \item $v$ es un argumento de algún mensaje del mailbox $u$,
+        \item o bien $v$ aparece en la continuación de un proceso esperando un mensaje en $u$.
+    \end{itemize}
+\end{frame}
+
+\begin{frame}{Mailbox type system}{Grafo de dependencias: LTS}
+    \begin{figure}[H]
+        \includegraphics[width=\textwidth]{dependency-graph-lts}
+    \end{figure}
+
+    La semántica del grafo de dependencias está dada por un LTS donde el label $u - v$ representa un camino que conecta $u$ con $v$. La relación $\varphi \xrightarrow{u-v} \varphi'$ describe que $u$ está conectado con $v$ en $\varphi$, y $\varphi'$ describe el grafo residual luego de eliminar las aristas usadas para conectar $u$ con $v$.
+\end{frame}
+
+\begin{frame}{Mailbox type system}{Grafo de dependencias: propiedades}
+    \begin{block}{Def 12: graph acyclicity and entailment}
+        Sea $\text{dep}(\varphi) \stackrel{\text{def}}{=} \{ (u,v) \mid \exists \varphi' : \varphi \xrightarrow{u-v} \varphi' \}$ la relación de dependencias generada por $\varphi$.
+        \begin{itemize}
+            \item Decimos que $\varphi$ es \emph{acíclico} si $\text{dep}(\varphi)$ es irreflexiva.
+            \item Decimos que $\varphi$ \emph{entails} (implica) $\psi$, escrito $\varphi \Rightarrow \psi$, si $\text{dep}(\psi) \subseteq \text{dep}(\varphi)$.
+        \end{itemize}
+    \end{block}
+\end{frame}
+
+\begin{frame}{Mailbox type system}{Grafo de dependencias: ejemplo}
+    \begin{figure}[H]
+        \includegraphics[width=\textwidth]{dependency-graph-example}
+    \end{figure}
+
+    \begin{itemize}
+        \item El mailbox $c$ es el argumento del mensaje $\msgtag{get}$ guardado en el mailbox $f$.
+        \item El mailbox $f$ aparece en la continuación luego de leer del mailbox $c$.
+    \end{itemize}
+
+    \vspace{-1em}
+    \begin{figure}
+        \centering
+        \digraph[scale=0.5]{dependencygraph}{
+            graph [rankdir=LR, pad=0.1]
+            node [shape=circle, fontname="Latin Modern Mono"]
+            edge [dir=none]
+            f -> c
+            f -> c
+        }
+    \end{figure}
+    \vspace{-1em}
+
+    Claramente el grafo de dependencias \textbf{tiene un ciclo}. Vamos a utilizar estos grafos en las reglas de tipado para evitar deadlocks.
 \end{frame}
 
 \begin{frame}{Mailbox type system}{Reglas de tipado}

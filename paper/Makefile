@@ -1,10 +1,14 @@
-LATEX := lualatex
+LATEX := pdflatex
 LATEXFLAGS := -interaction=nonstopmode --shell-escape -synctex=1
 
 *.pdf: *.tex
 	$(LATEX) $(LATEXFLAGS) --jobname $(basename $<) $<
+	$(LATEX) $(LATEXFLAGS) --jobname $(basename $<) $<
+
+watch:
+	while inotifywait -e close_write *.tex; do make; done
 
 clean:
-	rm *.aux *.log *.nav *.out *.snm *.synctex.gz *.toc
+	rm -rf *.aux *.log *.nav *.out *.snm *.synctex.gz *.toc ./tmp
 
-.PHONY: clean
+.PHONY: watch clean
