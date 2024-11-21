@@ -79,7 +79,7 @@
 
 \begin{frame}{Mailbox calculus}{Sintaxis: procesos}
     \begin{block}{Invocación}
-        $X[\overline{u}]$ representa la invocación de un proceso llamado $X$ con parámetros $\overline{u}$. Asumimos que existe una definición global de procesos de la forma $X(\overline{x}) \triangleq P$.
+        $\text{X}[\overline{u}]$ representa la invocación de un proceso llamado $\text{X}$ con parámetros $\overline{u}$. Asumimos que existe una definición global de procesos de la forma $\text{X}(\overline{x}) \triangleq P$.
     \end{block}
 
     \begin{block}{Paralelo y restricción}
@@ -443,13 +443,79 @@
     Esto está mal porque el tipo de $u$ especifica que un mensaje $\msgtag{A}$ puede estar acompañado de otro mensaje $\msgtag{C}$ o $\msgtag{B}$. La solución es llevar los patrones a una \textbf{forma normal}. En este ejemplo, una forma normal podría ser: $u:?\msgtag{A} \cdot (\msgtag{B} + \msgtag{C})$.
 \end{frame}
 
-\begin{frame}{Mailbox type system}{Propiedades}
-    \begin{block}{Teorema 23}
+\begin{frame}{Mailbox type system}{\texttt{[T-PAR]}}
+    \begin{figure}[H]
+        \includegraphics[height=3em]{typing-rules-t-par}
+    \end{figure}
+
+    La composición paralela $P_1 | P_2$ posiblemente necesite tipar 2 usos distintos del mismo mailbox $u$, ya que $P_1$ podría escribir un mensaje $\msgtag{A}$ en $u$ mientras que $P_2$ podría escribir otro mensaje $\msgtag{B}$. En la composición paralela $P_1 | P_2$ necesitamos tipar $u$ con un único tipo que contemple ambos mensajes.
+\end{frame}
+
+\begin{frame}{Mailbox type system}{Combinación de tipos}
+    \begin{figure}[H]
+        \includegraphics[width=0.9\textwidth]{type-combinator}
+    \end{figure}
+
+    \begin{itemize}
+        \item $!\msgtag{A} \parallel !\msgtag{B} = !(\msgtag{A} \cdot \msgtag{B})$
+            \\ Guardar un mensaje $\msgtag{A}$ y otro $\msgtag{B}$ es equivalente al patrón producto $\msgtag{A} \cdot \msgtag{B}$.
+        \item $!\msgtag{A} \parallel ?(\msgtag{A} \cdot \msgtag{B}) = ?\msgtag{B}$
+            \\ Cuando el mailbox se usa para input y output, el tipo combinado es el \textbf{balance final de mensajes} en el mailbox.
+    \end{itemize}
+
+    El operator $\parallel$ se extiende inductivamente para la combinación de ambientes.
+\end{frame}
+
+\begin{frame}{Mailbox type system}{\texttt{[T-NEW]}}
+    \begin{figure}[H]
+        \includegraphics[height=3em]{typing-rules-t-new}
+    \end{figure}
+
+    Al crear un nuevo mailbox $a$ con scope $P$ pedimos que el tipo de $a$ sea $?\mathbb{1}$ (mailbox vacío) indicando que todos los mensajes producidos por los subprocesos de $P$ son todos eventualmente consumidos (también por subprocesos de $P$).
+    \vspace{1em}
+
+    El uso de $a$ por $P$ y sus subprocesos es \textbf{balanceado}.
+\end{frame}
+
+\begin{frame}{Propiedades de procesos bien tipados}
+    \begin{block}{Teo 23: Subject reduction}
+        Si $\Gamma$ es \emph{reliable}, $\Gamma \vdash P :: \varphi$ y $P \rightarrow Q$ entonces $\Gamma \vdash Q :: \varphi$
     \end{block}
-    \begin{block}{Teorema 24}
+    \vspace{1em}
+
+    En contraste con otros tipos comportamentales, en particular con session types, los mailbox types usados por un proceso no cambian. Es decir no es necesario realizar una reducción de los mailbox types para preservar el tipo del proceso.
+    \vspace{1em}
+
+    Este resultado se ancla fuertemente en la idea de que el tipo del mailbox refleja el \textbf{balance} final de mensajes. La preservación de tipos garantiza que un proceso no va a consumir más mensajes de los que se producen, ni va a producir más mensajes de los que se consumen.
+\end{frame}
+
+\begin{frame}{Propiedades de procesos bien tipados}
+    \begin{block}{Teo 24: Soundness (resultado principal)}
+        Si $\emptyset \vdash P :: \varphi$ entonces $P$ es \emph{mailbox conformant} y \emph{deadlock free}.
     \end{block}
-    \begin{block}{Teorema 25}
+    \vspace{1em}
+
+    Los procesos cerrados y bien tipados tienen la garantía de ser \emph{mailbox conformant} (no reciben mensajes inesperados) y además son \emph{deadlock free}.
+\end{frame}
+
+\begin{frame}{Propiedades de procesos bien tipados}
+    \begin{block}{Teo 25: Fair termination}
+        Si $\emptyset \vdash P :: \varphi$ y $P$ es \emph{finitely unfolding}
+        \\ entonces $P$ es \emph{fairly terminating}.
     \end{block}
+    \vspace{1em}
+
+    Decimos que $P$ es \emph{finitely unfolding} si todas las reducciones maximales de $P$ usan \texttt{[R-DEF]} (invocación de procesos) una cantidad \textbf{finita} de veces.
+    \vspace{1em}
+
+    La intuición es que $P$ es fairly terminating si se invoca una cantidad finita de procesos. Al estar $P$ bien tipado bajo el ambiente vacío, concluimos que todos los mailboxes tienen un balance final nulo, es decir terminan vacíos, y por lo tanto se puede garantizar \emph{junk freedom} (no hay mensajes sin consumir).
+\end{frame}
+
+\begin{frame}{Fair termination}
+    \begin{block}{}
+        $(\nu a)(a!\msgtag{m} | \text{X}[a])$ con $\text{X}(x) \triangleq \text{X}[x]$
+    \end{block}
+    \vspace{1em}
 \end{frame}
 
 \begin{frame}{Encoding binary sessions}
