@@ -13,5 +13,5 @@ Ciencias de la Computación - FCEN - UBA\
   - [Práctica 4](prácticas/p04): Subtipado y Cálculo-λ con sesiones
 
 - Final: presentación de un paper
-  - [Mailbox Types for Unordered Interactions](https://drops.dagstuhl.de/storage/00lipics/lipics-vol109-ecoop2018/LIPIcs.ECOOP.2018.15/LIPIcs.ECOOP.2018.15.pdf): Ugo de'Liguoro, Luca Padovani
-  - [Presentación](./paper)
+  - [Mailbox Types for Unordered Interactions](./paper/LIPIcs.ECOOP.2018.15.pdf): Ugo de'Liguoro, Luca Padovani
+  - [Presentación](./paper/mailbox-types.pdf)
