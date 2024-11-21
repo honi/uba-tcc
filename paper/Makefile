@@ -1,7 +1,7 @@
 LATEX := pdflatex
 LATEXFLAGS := -interaction=nonstopmode --shell-escape -synctex=1
 
-*.pdf: *.tex
+mailbox-types.pdf: mailbox-types.tex
 	$(LATEX) $(LATEXFLAGS) --jobname $(basename $<) $<
 	$(LATEX) $(LATEXFLAGS) --jobname $(basename $<) $<
 

@@ -2,6 +2,7 @@
 \usepackage[utf8]{inputenc}
 \usepackage[pdf,tmpdir]{graphviz}
 \usepackage{graphicx}
+\usepackage{svg}
 \usepackage[dvipsnames]{xcolor}
 \usepackage{mathrsfs}
 \usepackage{bbold}
@@ -24,6 +25,7 @@
 \newcommand{\parbar}{\kern3pt\rule[-3pt]{0.8pt}{0.9\baselineskip}\kern3pt}
 
 \title{Mailbox Types for Unordered Interactions\footnote{\tiny{Ugo de'Liguoro, Luca Padovani (2018). https://arxiv.org/abs/1801.04167}}}
+\titlegraphic{\includesvg[scale=0.2]{assets/mailbox.svg}}
 \author{Presentación por Jonathan Bekenstein}
 \institute{Materia optativa sobre Tipos Comportamentales y Contratos}
 \date{2024}
@@ -33,14 +35,15 @@
 \frame{\titlepage}
 
 \begin{frame}{Introducción}
-    Modelar interacciones \textbf{asincrónicas} sobre diferentes topologías de procesos concurrentes. La comunicación es \textbf{multi-party} y sucede mediante el uso de un \textbf{mailbox}, en donde:
+    Buscamos modelar protocolos de comunicación en diferentes topologías de procesos concurrentes. La comunicación es \textbf{multi-party} y sucede mediante el uso de \textbf{mailboxes} no ordenados, en donde:
     \begin{itemize}
         \item procesos pueden escribir mensajes identificados por un \emph{tag} con argumentos opcionales,
         \item procesos pueden consumir (leer) los mensajes en un orden arbitrario (\emph{out-of-order} o \emph{selective processing}).
     \end{itemize}
+
     \center
     \vspace{-1em}
-    \digraph[scale=0.5]{intro}{
+    \digraph[scale=0.4]{intro}{
         graph [rankdir=LR, pad=0.1]
         node [shape=circle, fontname="Latin Modern Mono"]
         mailbox [shape=box]
@@ -49,6 +52,9 @@
         P3 -> mailbox
         mailbox -> Q
     }
+    \vspace{-1em}
+
+    Procesos bien tipados respetan el protocolo y no tienen deadlocks.
 \end{frame}
 
 \begin{frame}{Mailbox calculus}{Sintaxis: gramática}
@@ -63,7 +69,7 @@
 \begin{frame}{Mailbox calculus}{Sintaxis: mensajes}
     \begin{block}{Enviar mensajes}
         $u!\msgstore{m}{v}$
-        \\ Guarda un mensaje en el mailbox $u$ identificado con el tag $\msgtag{m}$ y argumentos $\overline{v}$.
+        \\ Guarda un mensaje identificado con el tag $\msgtag{m}$ y argumentos $\overline{v}$ en el mailbox $u$.
     \end{block}
 
     \begin{block}{Recibir mensajes}
@@ -166,17 +172,6 @@
         \\
         Es una propiedad más fuerte que deadlock freedom. Si un proceso es \emph{fairly terminating} entonces se garantiza \emph{junk freedom} (no quedan mensajes sin consumir en ningún mailbox).
     \end{block}
-\end{frame}
-
-\begin{frame}{Ejemplo 2: Future variable}
-    \begin{figure}[H]
-        \includegraphics[width=\textwidth]{example2-future}
-    \end{figure}
-    \begin{figure}[H]
-        \includegraphics[width=\textwidth]{example2-deadlock}
-    \end{figure}
-
-    Es legal hacer un \msgtag{get} de una variable futura antes de que sea resuelta con \msgtag{resolve}. Este proceso es \emph{mailbox conformant} pero está en deadlock. Para evitar que este proceso esté bien tipado se usan \emph{dependency graphs}.
 \end{frame}
 
 \begin{frame}{Mailbox type system}{Sintaxis}
@@ -325,7 +320,18 @@
     \end{block}
 \end{frame}
 
-\begin{frame}{Mailbox type system}{Grafo de dependencias: ejemplo}
+\begin{frame}{Ejemplo 2: Future variable}{Definición}
+    \begin{figure}[H]
+        \includegraphics[width=\textwidth]{example2-future}
+    \end{figure}
+
+    \begin{itemize}
+        \item Una variable futura admite un único mensaje \msgtag{put} para setear el valor de la variable.
+        \item Puede recibir una cantidad arbitraria de mensajes \msgtag{get}, antes y después de ser seteada. Si se reciben antes del \msgtag{put}, estos mensajes quedan pendientes en el mailbox ya que el proceso definido por Future no tiene una guarda que selecciona los mensajes \msgtag{get}.
+    \end{itemize}
+\end{frame}
+
+\begin{frame}{Ejemplo 2: Future variable}{Detección de deadlock con el grafo de dependencias}
     \begin{figure}[H]
         \includegraphics[width=\textwidth]{dependency-graph-example}
     \end{figure}
@@ -352,7 +358,89 @@
 \end{frame}
 
 \begin{frame}{Mailbox type system}{Reglas de tipado}
-    Type environments
+    \begin{block}{Type environments}
+        $\Gamma$ y $\Delta$ son funciones parciales de nombres a tipos: $\overline{u} : \overline{\tau}$.
+    \end{block}
+
+    \begin{block}{Procesos}
+        $\Gamma \vdash P :: \varphi$
+        \\
+        $P$ está bien tipado bajo $\Gamma$ y genera el grafo de dependencias $\varphi$. Decimos que el juicio de tipado está bien formado si $\text{fn}(\varphi) \subseteq \text{dom}(\Gamma)$ y $\varphi$ es acíclico.
+    \end{block}
+
+    \begin{block}{Guardas}
+        $\Gamma \vdash G$
+    \end{block}
+\end{frame}
+
+\begin{frame}{Mailbox type system}{Reglas de tipado}
+    \begin{figure}[H]
+        \includegraphics[width=\textwidth]{typing-rules}
+    \end{figure}
+\end{frame}
+
+\begin{frame}{Mailbox type system}{\texttt{[T-MSG]}}
+    \begin{figure}[H]
+        \includegraphics[height=2em]{typing-rules-t-msg}
+    \end{figure}
+
+    Un mensaje está bien tipado si el mailbox $u$ admite recibir un mensaje con tag $\msgtag{m}$ y argumentos de tipo $\overline{\tau}$, y además los valores de los argumentos $\overline{v}$ efectivamente tienen tipo $\overline{\tau}$.
+    \vspace{1em}
+
+    Enviar un mensaje genera una dependencia entre el mailbox $u$ y todos los argumentos $\overline{v}$.
+    \\
+    $\{ u, \{ \overline{v} \} \} \equiv \{u, v_1\} \sqcup \dots \sqcup \{u, v_n\}$
+\end{frame}
+
+\begin{frame}{Mailbox type system}{\texttt{[T-FAIL]} y \texttt{[T-FREE]}}
+    \begin{figure}[H]
+        \includegraphics[height=2.5em]{typing-rules-t-fail-t-free}
+    \end{figure}
+
+    La regla \texttt{[T-FAIL]} permite tipar un \emph{runtime error} si el mailbox $u$ tiene tipo $?\mathbb{0}$ indicando que el mailbox es \emph{unreliable} (recibió un mensaje inesperado).
+    \vspace{1em}
+
+    La regla \texttt{[T-FREE]} dice que podemos liberar el mailbox $u$ si tiene tipo $?\mathbb{1}$ indicando que está vacío, siempre y cuando la continuación $P$ está bien tipada en el ambiente residual.
+\end{frame}
+
+\begin{frame}{Mailbox type system}{\texttt{[T-IN]}}
+    \begin{figure}[H]
+        \includegraphics[height=3em]{typing-rules-t-in}
+    \end{figure}
+
+    Consumir un mensaje $\msgtag{m}$ de un mailbox $u$ requiere que el mailbox tenga tipo $?(\msgstore{m}{\tau} \cdot E)$ que garantiza que hay al menos 1 mensaje $\msgtag{m}$, posiblemente con otros mensajes acorde al patrón $E$.
+    \vspace{1em}
+
+    La continuación $P$ debe estar bien tipada en un ambiente donde el mailbox tiene tipo $?E$ que describe el contenido del mailbox luego de haber consumido el mensaje $\msgtag{m}$, y además incluye el tipo de los argumentos $\overline{x}$ del mensaje.
+\end{frame}
+
+\begin{frame}{Mailbox type system}{\texttt{[T-BRANCH]}}
+    \begin{figure}[H]
+        \includegraphics[height=3em]{typing-rules-t-branch}
+    \end{figure}
+
+    La composición de guardas $G_1 + G_2$ ofrece las acciones de $G_1$ y $G_2$ donde cada una se corresponde con el subpatrón $E_1$ y $E_2$ del mailbox type $?(E_1 + E_2)$.
+\end{frame}
+
+\begin{frame}{Mailbox type system}{\texttt{[T-GUARD]}}
+    \begin{figure}[H]
+        \includegraphics[height=3em]{typing-rules-t-guard}
+    \end{figure}
+
+    Esta regla tipa un \emph{guarded process} $G$ que posiblemente consume mensajes del mailbox $u$. El grafo de dependencias se define entre $u$ y todas las variables libres que aparecen en la continuación.
+    \vspace{1em}
+
+    La condición $\models E$ pide que el patrón $E$ esté en \textbf{forma normal}.
+\end{frame}
+
+\begin{frame}{Mailbox type system}{Patrones en forma normal}
+    $u:?(\msgtag{A} \cdot \msgtag{C} + \msgtag{B} \cdot \msgtag{A}) \vdash u? \msgtag{A}.P + u? \msgtag{B}.Q$
+    \vspace{1em}
+
+    Si usamos la regla \texttt{[T-IN]} para tipar ambas guardas, necesitamos tipar $P$ y $Q$ en un ambiente donde el mailbox $u$ fue actualizado para reflejar que se consumió un mensaje. Podríamos inferir que para $P$ tenemos $u:?\msgtag{C}$ y para $Q$ tenemos $u:?\msgtag{A}$.
+    \vspace{1em}
+
+    Esto está mal porque el tipo de $u$ especifica que un mensaje $\msgtag{A}$ puede estar acompañado de otro mensaje $\msgtag{C}$ o $\msgtag{B}$. La solución es llevar los patrones a una \textbf{forma normal}. En este ejemplo, una forma normal podría ser: $u:?\msgtag{A} \cdot (\msgtag{B} + \msgtag{C})$.
 \end{frame}
 
 \begin{frame}{Mailbox type system}{Propiedades}
@@ -365,6 +453,12 @@
 \end{frame}
 
 \begin{frame}{Encoding binary sessions}
+\end{frame}
+
+\begin{frame}{Related work}
+\end{frame}
+
+\begin{frame}{Conclusiones}
 \end{frame}
 
 \end{document}
